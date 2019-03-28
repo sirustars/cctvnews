@@ -1,0 +1,51 @@
+# pip install BeautifulSoup4
+# pip install requests
+# pip install python_docx
+
+from bs4 import BeautifulSoup
+import requests
+from docx import Document
+from docx.shared import Inches
+from docx.oxml.ns import qn
+from docx.shared import Pt
+document = Document()  # 创建的示例必须是全局的， 要放到放到程序入口初始化的地方    1405161366
+# 提取页面内的url 集合
+
+def get_links_from(who_sells=0):
+    urls = []
+    list_view = 'http://tv.cctv.com/lm/xwlb/day/2019{}.shtml'.format(str(who_sells))
+    wb_data = requests.get(list_view)
+    wb_data.encoding = 'utf-8'
+    soup = BeautifulSoup(wb_data.text,'lxml')
+    for link in soup.select('body:nth-of-type(1) > ul > li > a '):
+        urls.append(link.get('href'))
+    return urls
+#下载每个url里面的标题和内容，并保存到word 里面
+def get_item_info(who_sells=0):
+    urls = get_links_from(who_sells)
+    document.add_heading('新闻联播20190'+str(date),level=0)
+    for url in urls:
+        new_wb_data = requests.get(url)
+        new_wb_data.encoding = 'utf-8'
+        soup =BeautifulSoup(new_wb_data.text,'lxml')
+        title = soup.title.text.split('_')[0]
+        for content in soup.select('#about_txt > div.mbd > div ') :
+            content = content.get_text()
+            document.styles['Normal'].font.name = u'仿宋_GB2312'            #调整字体
+            document.styles['Normal'].font.size = Pt(16)
+            document.styles['Normal']._element.rPr.rFonts.set(qn('w:eastAsia'), u'仿宋_GB2312')
+            p1 = document.add_paragraph(title)
+            p1.style = document.styles['Heading 1']
+            style = document.styles['Heading 1']    #调整字体
+            font1 = style.font
+            font1.name = "Microsoft YaHei UI"
+            font1.bold = False
+            font1.color.rgb = None
+            p2 = document.add_paragraph(content)
+            p2.paragraph_format.first_line_indent = Inches(0.5)
+            document.save('新闻联播2019'+str(date)+'.docx')
+
+#while True:
+date = input("请输入日期如0101：")
+get_item_info(date)
+
